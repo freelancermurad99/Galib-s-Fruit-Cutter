@@ -3,6 +3,26 @@ import { GameEngine } from './game/engine';
 import { GameState } from './game/types';
 import { MAX_MISSED } from './game/constants';
 
+declare global {
+  interface Window {
+    CrazyGames?: {
+      SDK?: {
+        game?: {
+          gameplayStart: () => void;
+          gameplayStop: () => void;
+        };
+        ad?: {
+          requestAd: (type: 'midgame' | 'rewarded', callbacks: {
+            adStarted?: () => void;
+            adFinished?: () => void;
+            adError?: (error: any) => void;
+          }) => void;
+        };
+      };
+    };
+  }
+}
+
 export default function App() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const engineRef = useRef<GameEngine | null>(null);
@@ -25,6 +45,15 @@ export default function App() {
 
     engine.onStateChange = (state: GameState) => {
       setGameState(state);
+      
+      // Stop CrazyGames gameplay tracking when game is over or back to menu
+      if (state === 'gameover' || state === 'menu') {
+        try {
+          window.CrazyGames?.SDK?.game?.gameplayStop?.();
+        } catch (e) {
+          console.error('CrazyGames gameplayStop error:', e);
+        }
+      }
     };
     engine.onScoreChange = (s: number, _c: number, m: number) => {
       setScore(s);
@@ -43,7 +72,46 @@ export default function App() {
     };
   }, [getEngine]);
 
-  const startGame = () => getEngine().startGame();
+  const requestAdAndStart = () => {
+    if (window.CrazyGames?.SDK?.ad?.requestAd) {
+      try {
+        window.CrazyGames.SDK.ad.requestAd('midgame', {
+          adStarted: () => {
+            // Ad is playing, game is already paused as we are in menu/gameover
+          },
+          adFinished: () => {
+            // Ad is finished, start the game
+            try { window.CrazyGames?.SDK?.game?.gameplayStart?.(); } catch (e) {}
+            getEngine().startGame();
+          },
+          adError: (error) => {
+            console.error('Ad Error:', error);
+            try { window.CrazyGames?.SDK?.game?.gameplayStart?.(); } catch (e) {}
+            getEngine().startGame();
+          }
+        });
+      } catch (e) {
+        console.error('requestAd error:', e);
+        getEngine().startGame();
+      }
+    } else {
+      getEngine().startGame();
+    }
+  };
+
+  const startGame = () => {
+    // If restarting after a game over, request an ad first
+    if (gameState === 'gameover') {
+      requestAdAndStart();
+    } else {
+      try {
+        window.CrazyGames?.SDK?.game?.gameplayStart?.();
+      } catch (e) {
+        console.error('gameplayStart error:', e);
+      }
+      getEngine().startGame();
+    }
+  };
   const resumeGame = () => getEngine().resume();
   const pauseGame = () => getEngine().pause();
 
