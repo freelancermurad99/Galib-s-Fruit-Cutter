@@ -3,10 +3,36 @@ import { GameEngine } from './game/engine';
 import { GameState } from './game/types';
 import { MAX_MISSED } from './game/constants';
 
+const isDevEnv = () => window.location.hostname === 'localhost' || 
+                       window.location.hostname === '127.0.0.1' || 
+                       window.location.hostname === '' || 
+                       window.location.protocol === 'file:';
+
+const callCgMethod = (domain: 'game' | 'ad', method: string, ...args: any[]) => {
+  if (isDevEnv()) return null;
+  try {
+    const cg = window.CrazyGames;
+    if (cg && cg.SDK && (cg.SDK as any)[domain]) {
+      const fn = (cg.SDK as any)[domain][method];
+      if (typeof fn === 'function') {
+        const res = fn.apply((cg.SDK as any)[domain], args);
+        if (res && res.catch) {
+          res.catch((e: any) => console.warn(`CG Async [${domain}.${method}]:`, e?.message || e));
+        }
+        return res;
+      }
+    }
+  } catch (e: any) {
+    console.warn(`CG Sync [${domain}.${method}]:`, e?.message || e);
+  }
+  return null;
+};
+
 declare global {
   interface Window {
     CrazyGames?: {
       SDK?: {
+        init?: () => Promise<void>;
         game?: {
           gameplayStart: () => void;
           gameplayStop: () => void;
@@ -30,6 +56,19 @@ export default function App() {
   const [score, setScore] = useState(0);
   const [missed, setMissed] = useState(0);
 
+  // Initialize CrazyGames SDK on mount
+  useEffect(() => {
+    if (!isDevEnv()) {
+      try {
+        if (window.CrazyGames?.SDK?.init) {
+          window.CrazyGames.SDK.init().catch((e: any) => console.error('CrazyGames init error:', e));
+        }
+      } catch (e) {
+        console.error(e);
+      }
+    }
+  }, []);
+
   const getEngine = useCallback(() => {
     if (!engineRef.current) {
       engineRef.current = new GameEngine();
@@ -45,14 +84,10 @@ export default function App() {
 
     engine.onStateChange = (state: GameState) => {
       setGameState(state);
-      
+
       // Stop CrazyGames gameplay tracking when game is over or back to menu
       if (state === 'gameover' || state === 'menu') {
-        try {
-          window.CrazyGames?.SDK?.game?.gameplayStop?.();
-        } catch (e) {
-          console.error('CrazyGames gameplayStop error:', e);
-        }
+        callCgMethod('game', 'gameplayStop');
       }
     };
     engine.onScoreChange = (s: number, _c: number, m: number) => {
@@ -80,25 +115,26 @@ export default function App() {
       if (!adHandled) {
         adHandled = true;
         clearTimeout(fallbackTimer);
-        try { window.CrazyGames?.SDK?.game?.gameplayStart?.(); } catch (e) {}
+        callCgMethod('game', 'gameplayStart');
         getEngine().startGame();
       }
     };
 
-    if (window.CrazyGames?.SDK?.ad?.requestAd) {
+    if (!isDevEnv()) {
       try {
-        window.CrazyGames.SDK.ad.requestAd('midgame', {
+        const adPromise = callCgMethod('ad', 'requestAd', 'midgame', {
           adStarted: () => {
             clearTimeout(fallbackTimer);
           },
           adFinished: () => {
             finalizeStart();
           },
-          adError: (error) => {
+          adError: (error: any) => {
             console.error('Ad Error:', error);
             finalizeStart();
           }
         });
+        
         // 1.5s fallback in case SDK suppresses callbacks silently
         fallbackTimer = setTimeout(finalizeStart, 1500);
       } catch (e) {
@@ -106,6 +142,7 @@ export default function App() {
         finalizeStart();
       }
     } else {
+      // Localhost or SDK missing: skip ad
       finalizeStart();
     }
   };
@@ -115,11 +152,7 @@ export default function App() {
     if (gameState === 'gameover') {
       requestAdAndStart();
     } else {
-      try {
-        window.CrazyGames?.SDK?.game?.gameplayStart?.();
-      } catch (e) {
-        console.error('gameplayStart error:', e);
-      }
+      callCgMethod('game', 'gameplayStart');
       getEngine().startGame();
     }
   };
