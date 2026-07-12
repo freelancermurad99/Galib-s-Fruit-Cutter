@@ -73,29 +73,40 @@ export default function App() {
   }, [getEngine]);
 
   const requestAdAndStart = () => {
+    let adHandled = false;
+    let fallbackTimer: any;
+
+    const finalizeStart = () => {
+      if (!adHandled) {
+        adHandled = true;
+        clearTimeout(fallbackTimer);
+        try { window.CrazyGames?.SDK?.game?.gameplayStart?.(); } catch (e) {}
+        getEngine().startGame();
+      }
+    };
+
     if (window.CrazyGames?.SDK?.ad?.requestAd) {
       try {
         window.CrazyGames.SDK.ad.requestAd('midgame', {
           adStarted: () => {
-            // Ad is playing, game is already paused as we are in menu/gameover
+            clearTimeout(fallbackTimer);
           },
           adFinished: () => {
-            // Ad is finished, start the game
-            try { window.CrazyGames?.SDK?.game?.gameplayStart?.(); } catch (e) {}
-            getEngine().startGame();
+            finalizeStart();
           },
           adError: (error) => {
             console.error('Ad Error:', error);
-            try { window.CrazyGames?.SDK?.game?.gameplayStart?.(); } catch (e) {}
-            getEngine().startGame();
+            finalizeStart();
           }
         });
+        // 1.5s fallback in case SDK suppresses callbacks silently
+        fallbackTimer = setTimeout(finalizeStart, 1500);
       } catch (e) {
         console.error('requestAd error:', e);
-        getEngine().startGame();
+        finalizeStart();
       }
     } else {
-      getEngine().startGame();
+      finalizeStart();
     }
   };
 
