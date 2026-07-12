@@ -82,17 +82,27 @@ export default function App() {
 
     const engine = getEngine();
 
-    engine.onStateChange = (state: GameState) => {
+    engine.onStateChange = (state: GameState, prevState?: GameState) => {
       setGameState(state);
 
-      // Stop CrazyGames gameplay tracking when game is over or back to menu
-      if (state === 'gameover' || state === 'menu') {
+      // Stop CrazyGames gameplay tracking when game is over, paused, or menu
+      if (state === 'gameover' || state === 'menu' || state === 'paused') {
         callCgMethod('game', 'gameplayStop');
+      }
+
+      // Start gameplay tracking when resuming from pause or starting
+      if (state === 'playing') {
+        callCgMethod('game', 'gameplayStart');
       }
     };
     engine.onScoreChange = (s: number, _c: number, m: number) => {
       setScore(s);
       setMissed(m);
+    };
+
+    // Bind engine's request to start (like pressing Space) to our React logic
+    engine.onStartRequest = () => {
+      startGame();
     };
 
     engine.init(canvas);
@@ -115,7 +125,7 @@ export default function App() {
       if (!adHandled) {
         adHandled = true;
         clearTimeout(fallbackTimer);
-        callCgMethod('game', 'gameplayStart');
+        // Engine will trigger onStateChange('playing') which handles gameplayStart
         getEngine().startGame();
       }
     };
@@ -149,10 +159,9 @@ export default function App() {
 
   const startGame = () => {
     // If restarting after a game over, request an ad first
-    if (gameState === 'gameover') {
+    if (gameState === 'gameover' || gameState === 'menu') {
       requestAdAndStart();
     } else {
-      callCgMethod('game', 'gameplayStart');
       getEngine().startGame();
     }
   };

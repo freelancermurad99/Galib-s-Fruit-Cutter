@@ -66,8 +66,9 @@ export class GameEngine {
 
   highScores: { score: number; date: string }[] = [];
 
-  onStateChange?: (state: GameState) => void;
+  onStateChange?: (state: GameState, prevState: GameState) => void;
   onScoreChange?: (score: number, combo: number, missed: number) => void;
+  onStartRequest?: () => void;
 
   emojiCache: Map<string, HTMLCanvasElement> = new Map();
   bgGradient!: CanvasGradient;
@@ -189,7 +190,11 @@ export class GameEngine {
       if (e.key === ' ' || e.key === 'Enter') {
         e.preventDefault();
         if (this.state === 'menu' || this.state === 'gameover') {
-          this.startGame();
+          if (this.onStartRequest) {
+            this.onStartRequest();
+          } else {
+            this.startGame();
+          }
         } else if (this.state === 'paused') {
           this.resume();
         }
@@ -198,6 +203,7 @@ export class GameEngine {
   }
 
   startGame() {
+    const prevState = this.state;
     this.state = 'playing';
     this.score = 0;
     this.missed = 0;
@@ -219,25 +225,28 @@ export class GameEngine {
     this.shakeIntensity = 0;
     this.flashTimer = 0;
     this.lastTime = performance.now();
-    this.onStateChange?.('playing');
+    this.onStateChange?.('playing', prevState);
     this.onScoreChange?.(0, 0, 0);
   }
 
   pause() {
+    const prevState = this.state;
     this.state = 'paused';
-    this.onStateChange?.('paused');
+    this.onStateChange?.('paused', prevState);
   }
 
   resume() {
+    const prevState = this.state;
     this.state = 'playing';
     this.lastTime = performance.now();
-    this.onStateChange?.('playing');
+    this.onStateChange?.('playing', prevState);
   }
 
   gameOver() {
+    const prevState = this.state;
     this.state = 'gameover';
     this.saveHighScore(this.score);
-    this.onStateChange?.('gameover');
+    this.onStateChange?.('gameover', prevState);
   }
 
   spawnFruit() {
