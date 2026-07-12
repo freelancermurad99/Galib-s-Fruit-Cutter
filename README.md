@@ -6,6 +6,10 @@ Welcome to **Galib's Fruit Cutter**, an exciting and fast-paced web-based fruit-
 
 In this game, your objective is to slice as many fruits as possible while avoiding the obstacles/bombs. 
 
+### ▶️ Play the Game Live
+You can play the game directly in your browser:  
+👉 **[Play Galib's Fruit Cutter Live!](https://freelancermurad99.github.io/Galib-s-Fruit-Cutter/dist/)**
+
 ### How to Play:
 - **Swipe or Click & Drag** your mouse/finger across the screen to slice the flying fruits.
 - **Earn points** for every successful slice.
@@ -39,8 +43,8 @@ To run the game on your local machine:
 This project is fully **Open Source** and free to use, modify, and distribute under the MIT License.
 
 **Copyright © 2026**
-- **Developer:** [Your Name / Galib]
-- **Owner/Company:** [Your Company Name / Copyright Owner]
+- **Designed & Developed by:** Md. Asadullah Hil Galib
+- **Owner / Company:** softct.com
 
 ---
 *Feel free to fork this repository, contribute, and make your own awesome versions of the game! If you use this code for commercial purposes, please provide proper attribution to the original developer.*
