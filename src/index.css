@@ -1,0 +1,124 @@
+@import "tailwindcss";
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes bounce-slow {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-12px);
+  }
+}
+
+@keyframes pulse-glow {
+  0%, 100% {
+    filter: drop-shadow(0 0 8px rgba(255, 71, 87, 0.4));
+  }
+  50% {
+    filter: drop-shadow(0 0 20px rgba(255, 71, 87, 0.8));
+  }
+}
+
+.animate-fadeIn {
+  animation: fadeIn 0.3s ease-out;
+}
+
+.animate-bounce-slow {
+  animation: bounce-slow 2s ease-in-out infinite;
+}
+
+.animate-pulse-glow {
+  animation: pulse-glow 2s ease-in-out infinite;
+}
+
+.start-photo-backdrop {
+  background-image: url('/galib.jpg');
+  background-position: center 24%;
+  background-size: cover;
+  filter: saturate(1.05) contrast(1.05);
+  transform: scale(1.03);
+  animation: photo-breathe 12s ease-in-out infinite alternate;
+}
+
+.brand-credit {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: center;
+  gap: 0.45rem;
+  max-width: 32rem;
+  margin-top: 0.35rem;
+  color: rgba(255, 255, 255, 0.55);
+  font-size: 0.72rem;
+  letter-spacing: 0.01em;
+  text-align: center;
+  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.7);
+}
+
+.brand-credit strong {
+  color: rgba(255, 255, 255, 0.9);
+  font-weight: 700;
+}
+
+.brand-credit a {
+  color: #ffd166;
+  font-weight: 700;
+  text-decoration: none;
+  transition: color 160ms ease;
+}
+
+.brand-credit a:hover {
+  color: #fff1a8;
+}
+
+.credit-divider {
+  color: rgba(255, 255, 255, 0.25);
+}
+
+@keyframes photo-breathe {
+  from {
+    transform: scale(1.03);
+  }
+  to {
+    transform: scale(1.07);
+  }
+}
+
+@media (max-width: 640px) {
+  .start-photo-backdrop {
+    background-position: center 20%;
+  }
+
+  .brand-credit {
+    max-width: 20rem;
+    line-height: 1.45;
+  }
+
+  .credit-divider {
+    display: none;
+  }
+}
+
+/* Disable text selection and callout on mobile */
+* {
+  -webkit-tap-highlight-color: transparent;
+  -webkit-touch-callout: none;
+}
+
+html, body {
+  overflow: hidden;
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  height: 100%;
+}
