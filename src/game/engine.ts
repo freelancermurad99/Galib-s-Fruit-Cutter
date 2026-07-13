@@ -211,10 +211,10 @@ export class GameEngine {
     this.bestCombo = 0;
     this.lastSliceTime = 0;
     this.difficultyTimer = 0;
-    this.spawnTimer = 900; // Start with a quick first spawn
-    this.spawnInterval = 1200;
-    this.fruitSpeed = 1;
-    this.bombChance = 0.08;
+    this.spawnTimer = 1500; // Delay before first spawn
+    this.spawnInterval = 2000; // Start slower
+    this.fruitSpeed = 0.8; // Start slower
+    this.bombChance = 0.05;
     this.pendingSpawns = 0;
     this.spawnAccum = 0;
     this.fruits = [];
@@ -260,27 +260,40 @@ export class GameEngine {
     const side = Math.random();
     let x: number, vx: number;
 
+    // Horizontal speed should scale with screen width so it crosses in the same relative time
+    const baseVx = (this.w * 0.003) * this.fruitSpeed;
+
     if (side < 0.3) {
       x = Math.random() * this.w * 0.3;
-      vx = (1 + Math.random() * 3) * this.fruitSpeed;
+      vx = baseVx * (0.8 + Math.random() * 0.5); // Move right
     } else if (side > 0.7) {
       x = this.w * 0.7 + Math.random() * this.w * 0.3;
-      vx = -(1 + Math.random() * 3) * this.fruitSpeed;
+      vx = -baseVx * (0.8 + Math.random() * 0.5); // Move left
     } else {
       x = this.w * 0.2 + Math.random() * this.w * 0.6;
-      vx = (Math.random() - 0.5) * 4 * this.fruitSpeed;
+      vx = (Math.random() - 0.5) * baseVx * 1.5; // Move slightly randomly
     }
 
-    const heightFactor = Math.min(this.h / 600, 1.3);
-    const baseVy = -(this.h * 0.018 + Math.random() * this.h * 0.008) * this.fruitSpeed * heightFactor;
+    // Dynamic gravity based on fruitSpeed squared so parabola shape stays the same when it gets faster
+    const fruitGravity = GRAVITY * (this.fruitSpeed * this.fruitSpeed);
+    
+    // Physics formula: v = sqrt(2 * g * h)
+    // We want the fruit to peak at 10% to 40% from the top of the screen
+    const targetPeakY = this.h * (0.1 + Math.random() * 0.3);
     const radius = type === 'watermelon' ? 38 : type === 'coconut' ? 34 : 28 + Math.random() * 8;
+    const startY = this.h + radius + 10;
+    const distanceToPeak = startY - targetPeakY;
+    
+    // Calculate required initial vertical velocity to perfectly reach the target peak
+    const vy = -Math.sqrt(2 * fruitGravity * distanceToPeak);
 
     const fruit: Fruit = {
       id: nextId++,
       x,
-      y: this.h + radius + 10,
+      y: startY,
       vx,
-      vy: baseVy,
+      vy,
+      gravityMultiplier: this.fruitSpeed * this.fruitSpeed, // Store multiplier so update loop uses it
       radius,
       rotation: Math.random() * Math.PI * 2,
       rotationSpeed: (Math.random() - 0.5) * 0.15,
@@ -557,10 +570,10 @@ export class GameEngine {
 
     // Difficulty ramp
     this.difficultyTimer += ms;
-    if (this.difficultyTimer > 5000) {
+    if (this.difficultyTimer > 10000) { // Every 10 seconds
       this.difficultyTimer = 0;
-      this.spawnInterval = Math.max(350, this.spawnInterval - 60);
-      this.fruitSpeed = Math.min(1.8, this.fruitSpeed + 0.06);
+      this.spawnInterval = Math.max(400, this.spawnInterval - 100);
+      this.fruitSpeed = Math.min(1.8, this.fruitSpeed + 0.08);
       this.bombChance = Math.min(0.20, this.bombChance + 0.015);
     }
 
@@ -587,7 +600,7 @@ export class GameEngine {
     for (const f of this.fruits) {
       f.x += f.vx;
       f.y += f.vy;
-      f.vy += GRAVITY;
+      f.vy += GRAVITY * (f.gravityMultiplier || 1); // Use dynamic gravity
       f.rotation += f.rotationSpeed;
 
       // Missed fruit

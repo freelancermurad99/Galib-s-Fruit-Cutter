@@ -15,6 +15,7 @@ export interface Fruit {
   type: FruitType;
   sliced: boolean;
   opacity: number;
+  gravityMultiplier?: number;
 }
 
 export interface SlicedHalf {
